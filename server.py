@@ -28,12 +28,9 @@ def start_server(conn):
             COUNT(*) AS frequency FROM links GROUP BY originNAME, destinationNAME
             ORDER BY frequency DESC''')
     json_data["links"] = list(map(list, json_data["links"]))
-    tools.print_array(json_data["websites"])
+    #tools.print_array(json_data["websites"])
 
     # Start the server Async
     loop = asyncio.get_event_loop()
     loop.run_until_complete(init_server)
     loop.run_forever()
-
-
-'''COUNT(destinationNAME) AS frequency FROM links GROUP BY destinationNAME ORDER BY frequency DESC'''
