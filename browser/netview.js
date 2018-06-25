@@ -81,16 +81,115 @@ function drawCircle(posX, posY, radius, color){
   ctx.fill();
 }
 
-function drawLoadingScreen(){
-  drawCircle(cX, cY, 100, "white");
-  drawText(millis, cX, cY-200);
-
-
+function drawLine(x1, y1, x2, y2, width){
+  ctx.lineWidth=width;
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  ctx.lineTo(x2,y2);
+  ctx.stroke();
 }
 
-class sparkle{
-  constructor(direction, radius, velocity){
-    
+// ============= Loading Screen ==============
+class Sparkle{
+  constructor(radius, magnitude, direction, changeInMagnitude){
+      this.radius = radius;
+      this.magnitude = magnitude;
+      this.direction = direction;
+      this.changeInMagnitude = changeInMagnitude;
+  }
+  draw(timeRef){
+    var m = this.changeInMagnitude * Math.sin(timeRef-this.direction) + this.magnitude;
+
+    ctx.strokeStyle = "black";
+    drawLine(cX + Math.cos(this.direction) * m, cY+80 + Math.sin(this.direction) * m, cX, cY+80, 5);
+    drawCircle(cX + Math.cos(this.direction) * m,
+               cY+80 + Math.sin(this.direction) * m,
+               this.radius,
+               "white");
+
+  }
+}
+
+var sparkles = [];
+const nSparkles = 10;
+var numberOfDots = 0;
+var timelog = 0;
+
+function drawLoadingScreen(){
+  for(i=0; i<nSparkles; i++){
+    dir = Math.PI * 2 * (i/nSparkles);
+    if(sparkles.length != nSparkles){
+      sparkles[i] = new Sparkle(15, 120, dir, 30);
+    }else{
+      sparkles[i].draw(millis/500);
+    }
+  }
+
+  if(millis-timelog>300){
+    timelog = millis;
+    numberOfDots+=1;
+    if(numberOfDots >= 4){numberOfDots=0;}
+
+    // try to Connecting
+    connectToServer();
+  }
+  var textToAdd = ".".repeat(numberOfDots)+" ".repeat(3-numberOfDots);
+  drawText("Connecting to server "+textToAdd, cX, cY-200);
+  drawCircle(cX, cY+80, 60, "white");
+}
+
+// ==================== Drawing the network =================
+class Pos{
+  constructor(tX, tY){
+    this.tX = tX;
+    this.tY = tY;
+    this.cX = 0;
+    this.cY = 0;
+  }
+  setTargetPos(tX, tY){
+    this.tX = tX;
+    this.tY = tY;
+  }
+  setCurrentPos(cX, cY){
+    this.cX = cX;
+    this.cY = cY;
+  }
+  animatePos(speed){
+      cX += (tX-cX) * speed;
+      cY += (tY-cY) * speed;
+  }
+}
+
+class Website{
+  constructor(name, targetPos, startingPos, links){
+
+  }
+  animate(){
+
+  }
+  draw(){
+
+  }
+}
+
+var size = 0;
+var timeLog = 0;
+function drawNet(){
+  if(millis-timeLog>10){
+    timeLog = millis;
+    size += (width/1.5-size)*0.1;
+  }
+  if(size<width/1.6){
+    drawCircle(cX, cY+80, 60+size, "white");
+  }else{
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, width, height);
+    // Draw the network
+    for(i=0; i<10; i++){
+      var site = json_data.links[i];
+      drawText(site[0], Math.random()*width, Math.random()*height);
+    }
+
   }
 }
 
@@ -107,12 +206,14 @@ function frame(){
   ctx.clearRect(0,0,width,height);
 
   // draw background
-  ctx.fillStyle = "black";
+  ctx.fillStyle = "lightblue";
   ctx.fillRect(0, 0, width, height);
 
 
-  if(json_loaded == false || millis<15000){
+  if(json_loaded == false || millis < 2000){
     drawLoadingScreen();
+  }else{
+    drawNet();
   }
   // prepare for next frame
   ctx.restore();
@@ -121,17 +222,19 @@ function frame(){
 
 
 // ================== SERVER FUNCTIONS ================================
+var socket = null;
+function connectToServer(){
+  socket = new WebSocket('ws://localhost:4357');
 
-var socket = new WebSocket('ws://localhost:4357');
+  // Connection opened
+  socket.addEventListener('open', function (event) {
+      socket.send('datarequest');
+  });
 
-// Connection opened
-socket.addEventListener('open', function (event) {
-    socket.send('datarequest');
-});
-
-// Listen for messages
-socket.addEventListener('message', function (event) {
-    msgReceived = 'Data received from server...';
-    json_data = JSON.parse(event.data);
-    json_loaded = true;
-});
+  // Listen for messages
+  socket.addEventListener('message', function (event) {
+      msgReceived = 'Data received from server...';
+      json_data = JSON.parse(event.data);
+      json_loaded = true;
+  });
+}
