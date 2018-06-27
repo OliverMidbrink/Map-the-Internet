@@ -361,7 +361,7 @@ function drawNet() {
 
         if (millis > (loadingScreen + 1000) && collisionsFound == 0 && generated == false) {
           generated = true;
-          alert('Generated!');
+          //alert('Generated!');
         }
 
       }
