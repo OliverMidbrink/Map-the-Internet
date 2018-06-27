@@ -66,7 +66,7 @@ var mouseX = 0;
 var mouseY = 0;
 var mousePressed = false;
 
-var loadingScreen = 2000;
+var loadingScreen = 1000;
 
 
 // ================== SETUP AND MANAGEMENT FUNCTIONS ====================
@@ -84,6 +84,16 @@ function resize() {
 }
 
 // ================== DRAW FUNCTIONS ==========================
+function getRandomColor() {
+  var letters = '0123456789ABCDEF';
+  var color = '#';
+  for (var i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+
+  return color;
+}
+
 function drawText(textToDraw, posX, posY) {
   ctx.font = '30px Arial';
   var textWidth = ctx.measureText(textToDraw).width;
@@ -146,8 +156,12 @@ var sparkles = [];
 const nSparkles = 10;
 var numberOfDots = 0;
 var timelog = 0;
+var loadingColor = 'lightblue';
 
 function drawLoadingScreen() {
+  ctx.fillStyle = loadingColor;
+  ctx.fillRect(0, 0, width, height);
+
   for (i = 0; i < nSparkles; i++) {
     dir = Math.PI * 2 * (i / nSparkles);
     if (sparkles.length != nSparkles) {
@@ -203,12 +217,31 @@ class Pos {
 }
 
 class Link {
+  constructor(originID, destinationID, strength) {
+    this.originID = originID;
+    this.destinationID = destinationID;
+    this.strength = strength;
+  }
+
+  draw() {
+    var site1 = websites[this.originID];
+    var site2 = websites[this.destinationID];
+    var dX = site1.pos.x - site2.pos.x;
+    var dY = site1.pos.y - site2.pos.y;
+    var dir = Math.atan2(dY, dX);
+
+    ctx.strokeStyle = colors[this.originID];
+    drawLine(site1.pos.x, site1.pos.y, site2.pos.x, site2.pos.y, this.strength);
+    drawLine(site2.pos.x, site2.pos.y, site2.pos.x - 5, site2.pos.y - 5, 1);
+    drawLine(site2.pos.x, site2.pos.y, site2.pos.x - 5, site2.pos.y + 5, 1);
+  }
 
 }
 
 
 class Website {
-  constructor(name, size, pos, links) {
+  constructor(name, size, pos, links, id) {
+    this.id = id;
     this.name = name;
     this.size = size;
     this.pos = pos;
@@ -220,20 +253,19 @@ class Website {
   }
 
   draw() {
-    if (scale > 0.3) {
+    if (scale > 0.5) {
       drawTextWithoutBackground(this.name, this.pos.x, this.pos.y - this.size - 30);
     }
 
-    //drawLine(this.pos.x, this.pos.y, this.pos.x, this.pos.y - 80, 5);s
-
-    drawCircle(this.pos.x, this.pos.y, this.size, 'lightblue');
+    //drawLine(this.pos.x, this.pos.y, this.pos.x, this.pos.y - 80, 5);
+    drawCircle(this.pos.x, this.pos.y, this.size, 'black');
   }
 
   overlaps(otherSite) {
     var distToOtherSite = Math.hypot(otherSite.pos.tX - this.pos.tX,
         otherSite.pos.tY - this.pos.tY) -
       this.size - otherSite.size;
-    if (distToOtherSite < 60) {
+    if (distToOtherSite < 500) {
       return true;
     }
 
@@ -246,7 +278,9 @@ var size = 0;
 var timeLog = 0;
 var firstTime = true;
 var websites = [];
+var links = [];
 var generated = false;
+var colors = [];
 
 function drawNet() {
   var collisionsFound = 0;
@@ -257,10 +291,10 @@ function drawNet() {
   }
 
   if (size < width / 1.6) {
+    ctx.fillStyle = loadingColor;
+    ctx.fillRect(0, 0, width, height);
     drawCircle(cX, cY + 80, 60 + size, bgColor);
   } else {
-    ctx.fillStyle = bgColor;
-    ctx.fillRect(0, 0, width, height);
 
     // Draw the network
     if (firstTime) {
@@ -269,34 +303,68 @@ function drawNet() {
         var siteName = jsonData.websites[i][0];
         var siteSize = Math.pow(jsonData.websites[i][1], 0.5) * 2;
         var position = new Pos(Math.random() * width, Math.random() * height);
-        position.setCurrentPos(Math.random() * width, Math.random() * height);
-        var links = [];
-        websites.push(new Website(siteName, siteSize, position, links));
+        position.setCurrentPos(cX, cY);
+        var siteLinks = [];
+        websites.push(new Website(siteName, siteSize, position, siteLinks, i));
+        colors.push(getRandomColor());
+      }
 
+      if (links.length == 0) {
+        for (i = 0; i < jsonData.links.length; i++) {
+          var link = jsonData.links[i];
+          var originID = -1;
+          var destinationID = -1;
+
+          for (j = 0; j < websites.length; j++) {
+            var name = websites[j].name;
+
+            // Check if origin exists
+            if (link[0] == name) {
+              originID = j;
+            }
+
+            // Check if destination exists
+            if (link[1] == name) {
+              destinationID = j;
+            }
+          }
+
+          if (originID != -1 && destinationID != -1) {
+            //alert(link[0] + ' ' + link[1] + ' ' + link[2]);
+            var strength = Math.pow(link[2], 0.8) * 0.2;
+            links.push(new Link(originID, destinationID, strength));
+          }
+        }
       }
     } else {
+      for (i = 0; i < links.length; i++) {
+        links[i].draw();
+      }
+
       for (i = 0; i < websites.length; i++) {
-        websites[i].draw();
+        if (generated) { websites[i].draw(); }
 
         if (generated == false) {
           for (j = 0; j < i; j++) {
             otherSite = websites[j];
             thisSite = websites[i];
+
             if (thisSite.overlaps(otherSite)) {
               collisionsFound += 1;
               var offsetX = (thisSite.pos.tX - otherSite.pos.tX) * (Math.random() + 0.5) * 2;
               var offsetY = (thisSite.pos.tY - otherSite.pos.tY) * (Math.random() + 0.5) * 2;
               thisSite.pos.setTargetPos(thisSite.pos.tX + offsetX, thisSite.pos.tY + offsetY);
-              thisSite.pos.setCurrentPos(Math.random() * width, Math.random() * height);
+              thisSite.pos.setCurrentPos(cX, cY);
             }
           }
         }
-      }
-    }
 
-    if (millis > 3000 && collisionsFound == 0 && generated == false) {
-      generated = true;
-      alert("generated");
+        if (millis > (loadingScreen + 1000) && collisionsFound == 0 && generated == false) {
+          generated = true;
+          alert('Generated!');
+        }
+
+      }
     }
 
     //drawText('collisionsFound: ' + collisionsFound, cX, cY);
@@ -312,7 +380,9 @@ function physics() {
   transY += (targetTransY - transY) / 10;
 
   for (i = 0; i < websites.length; i++) {
-    websites[i].animate();
+    if (generated) {
+      websites[i].animate();
+    }
   }
 }
 
@@ -323,9 +393,6 @@ function frame() {
   ctx.translate(transX, transY);
   ctx.scale(currentScale, currentScale);
 
-  // draw background
-  ctx.fillStyle = 'lightblue';
-  ctx.fillRect(0, 0, width, height);
 
   if (jsonLoaded == false || millis < loadingScreen) {
     drawLoadingScreen();

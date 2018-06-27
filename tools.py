@@ -212,7 +212,7 @@ def replace_names_in_db(conn):
 
     cursor = conn.cursor()
     cursor.execute('''DELETE FROM links''')
-    cursor.executemany('''INSERT or IGNORE INTO links(originNAME, destinationNAME, originURL, destinationURL) 
+    cursor.executemany('''INSERT or IGNORE INTO links(originNAME, destinationNAME, originURL, destinationURL)
                 VALUES (?,?,?,?)''', new_rows)
     conn.commit()
 
