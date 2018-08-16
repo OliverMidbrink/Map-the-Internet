@@ -16,13 +16,15 @@ async def client_handler(client_socket, path):
             print('data was requested...')
             await client_socket.send(json.dumps(json_data, ensure_ascii=False))
 
-'''
+
 if platform == "linux" or platform == "linux2":
+    print('On linux host')
     init_server = websockets.serve(client_handler, '46.101.59.81', 4357)
 else:
+    print('On windows/mac host')
     init_server = websockets.serve(client_handler, 'localhost', 4357)
-'''
-init_server = websockets.serve(client_handler, 'localhost', 4357)
+
+#init_server = websockets.serve(client_handler, 'localhost', 4357)
 
 def start_server(conn):
     # Setup json data
