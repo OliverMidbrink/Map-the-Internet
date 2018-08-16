@@ -94,6 +94,20 @@ function getRandomColor() {
   return color;
 }
 
+function drawTextToWidth(textToDraw, posX, posY, width, color) {
+  ctx.font = '30px Arial';
+  var initialTextWidth = ctx.measureText(textToDraw).width;
+
+  var newFontSize = width / initialTextWidth * 30;
+  if (newFontSize > width) {newFontSize = width;}
+
+  ctx.font = newFontSize + 'px Arial';
+  var newTextWidth = ctx.measureText(textToDraw).width;
+
+  ctx.fillStyle = color;
+  ctx.fillText(textToDraw, posX - newTextWidth / 2, posY + newFontSize / 3.5);
+}
+
 function drawText(textToDraw, posX, posY) {
   ctx.font = '30px Arial';
   var textWidth = ctx.measureText(textToDraw).width;
@@ -253,12 +267,27 @@ class Website {
   }
 
   draw() {
-    if (scale > 0.5) {
-      drawTextWithoutBackground(this.name, this.pos.x, this.pos.y - this.size - 30);
-    }
-
-    //drawLine(this.pos.x, this.pos.y, this.pos.x, this.pos.y - 80, 5);
     drawCircle(this.pos.x, this.pos.y, this.size, 'black');
+    ctx.font = '30px Arial';
+    var textWidthOutside = ctx.measureText(this.name).width;
+
+    if (scale > (10 / this.size)) {
+      var textCo = 10;
+      if (this.size * 1.8 > textWidthOutside) {
+        drawTextToWidth(this.name,
+                       this.pos.x,
+                       this.pos.y,
+                       this.size * 1.8,
+                       'white');
+      } else {
+        drawTextWithoutBackground(this.name,
+                                  this.pos.x,
+                                  this.pos.y - this.size * 1.05 - 30,
+                                  Math.pow(this.size, 0.3) * textCo);
+      }
+    }
+    //drawLine(this.pos.x, this.pos.y, this.pos.x, this.pos.y - 80, 5);
+
   }
 
   overlaps(otherSite) {
@@ -273,6 +302,12 @@ class Website {
   }
 
 }
+
+var size = 0;
+var timeLog = 0;
+var firstTime = true;
+var websites = [];
+
 
 var size = 0;
 var timeLog = 0;
@@ -301,7 +336,7 @@ function drawNet() {
       firstTime = false;
       for (i = 0; i < 200; i++) {
         var siteName = jsonData.websites[i][0];
-        var siteSize = Math.pow(jsonData.websites[i][1], 0.5) * 2;
+        var siteSize = Math.pow(jsonData.websites[i][1], 0.5) * 6;
         var position = new Pos(Math.random() * width, Math.random() * height);
         position.setCurrentPos(cX, cY);
         var siteLinks = [];
