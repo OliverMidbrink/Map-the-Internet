@@ -116,6 +116,35 @@ def get_links(url):
     return links
 
 
+def get_links_from_html(html, url):
+    base_url = ''
+    soup = BeautifulSoup(html, 'lxml')
+
+    links = []
+
+    for link in soup.find_all('a'):
+        link_url = link.get('href')
+
+        if (link_url == '#' or link_url == None or link_url == ''):
+            continue
+        elif (link_url[:1] == '/'):
+            if (base_url == ''):
+                base_url = get_base_url(url)
+
+            links.append(base_url + link_url)
+            # print('Appending: ', base_url+link_url)
+
+        elif (link_url[:1] == 'h'):
+            links.append(link_url)
+            # print('Appending: ', link_url)
+
+        else:
+            pass
+            # print('Url not processed: ', link_url)
+
+    return links
+
+
 def filter_images(url, imageDirectory):
     for img_url in get_image_urls(url):
         try:

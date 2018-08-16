@@ -1,153 +1,129 @@
-import aiohttp
 import asyncio
 import time
-import random
-import re
-from bs4 import BeautifulSoup
+import aiohttp
 import urllib
+from bs4 import BeautifulSoup
+import tools
+import ssl
+import managedb
 
+tasks_left = 0
+tasks_started = 0
+tasks_finished = 0
 
-async def get_domain_name(url):
-    base = await get_base_url(url)
-    name = re.findall(r'[\w|\-]+', base)
-    output = ''
-    len_name = len(name)
+async def get_html(url):
+    try:
+        async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(verify_ssl=False, limit=60)) as session:
+            async with session.get(url, headers={'User-Agent': 'Mozilla/5.0'}) as response:
+                try:
+                    print('\t\t{} has started...'.format(url))
 
-    if len_name > 0:  # if there are any results
-        if name[len_name-1] == 'uk':
-            output = name[len_name-3]
-        else:
-            output = name[len_name-2]
-    return output
+                    html = await response.text()
+                    print('\t\t{} done.'.format(url))
+                    return html
 
-
-async def get_base_url(input_url):
-    base_url = input_url
-    # Return if the url is none
-    if (input_url == None):
-        return ''
-        print('Url is None')
-    base_urls = re.findall(r'\w{1,7}://[^/]*', input_url)
-    if (len(base_urls) > 0):
-        return base_urls[0]
-    print("No base url found for: ", input_url)
+                    print('\t\t{} done.'.format(url))
+                except Exception as e:
+                    """try:
+                        print('url run sync: {}'.format(url))
+                        res = urllib.request.urlopen(urllib.request.Request(url, ssl = ssl._create_unverified_context(), headers={'User-Agent': 'Mozilla/5.0'})).read()
+                        print('\t\t{} done.'.format(url))
+                        return res
+                    except:
+                        print("error with {}".format(url))"""
+                    pass
+    except Exception as e:
+        tasks_finished
+        print(e)
     return ''
 
 
-async def get_links(url):
-    base_url = ''
-    r = ''
-    try:
-        print("fetching...")
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers={'User-Agent': 'Mozilla/5.0'}) as response:
-                r = await response.text()
-        print("done.")
-    except Exception as e:
-        print(e)
-    soup = BeautifulSoup(r, 'lxml')
+async def crawl_site(conn, url):
+    global tasks_started
+    tasks_started += 1
+    #print('\t\t\t{} is getting html...'.format(url))
+    conn.cursor().execute('''DELETE from queue WHERE queueURL="{}"'''.format(url.replace('"', '')))
+    html = await get_html(url)
+    #print('\t\t\t{} done.'.format(url))
+    if html == '':
+        return
 
-    links = []
+    current_site_name = tools.get_domain_name(url)
+    discovered_links = tools.get_links_from_html(html, url)
 
-    for link in soup.find_all('a'):
-        link_url = link.get('href')
+    links_found = set()
+    urls_found = set()
 
-        if (link_url == '#' or link_url == None or link_url == ''):
-            continue
-        elif (link_url[:1] == '/'):
-            if (base_url == ''):
-                base_url = await get_base_url(url)
+    for link_url in discovered_links:
+        linked_site_name = tools.get_domain_name(link_url)
 
-            links.append(base_url + link_url)
-            # print('Appending: ', base_url+link_url)
-
-        elif (link_url[:1] == 'h'):
-            links.append(link_url)
-            # print('Appending: ', link_url)
+        if linked_site_name == current_site_name:
+            continue  # Skip internal links for efficiency
 
         else:
-            pass
-            #print('Url not processed: ', link_url)
+            item = (current_site_name, linked_site_name, url, link_url)
+            links_found.add(item)
+            urls_found.add(link_url)
 
-    return links
+    print('{} external links found on {}'.format(len(links_found), url))
+
+    managedb.insert_links(conn, links_found)
+    managedb.add_to_queue(conn, urls_found)
+    managedb.add_to_crawled(conn, [url])
+    managedb.ban_site(conn, current_site_name)
+
+    global tasks_finished
+    tasks_finished += 1
+    print('{} tasks running'.format(tasks_started - tasks_finished))
 
 
-# ==================================================================================
+async def crawl_sites(conn, urls):
+    tasks = []
 
-def find_links(number_of_links, starting_url):
+    if len(urls) == 0:
+        print('No urls. Aborting.')
+        return
 
-    t0 = time.time()
+    for url in urls:
+        tasks.append(asyncio.ensure_future(crawl_site(conn, url)))
+    await asyncio.wait(tasks)
 
-    queue = set()
-    crawled = set()
-    banned = set()
 
-    max_visits_per_site = 10
-    visited_sites = {}
-    links_found = []
+async def crawl_continuous(conn, links_to_find, loop):
+    print('================== HERE ===============')
+    number_of_links_at_start = managedb.get_number_of_links(conn)
+    number_of_links_found = 0
 
-    queue.add(starting_url)
+    while number_of_links_found < links_to_find:
+        global tasks_started
+        global tasks_finished
+        tasks_running = tasks_started - tasks_finished
+        print(tasks_running)
+        next_batch = managedb.get_batch(conn, 40)
 
-    async def crawl():
-        while len(links_found) < number_of_links:
-            current_site_url = random.sample(queue, 1)[0]
-            queue.remove(current_site_url)
-            current_site_name = await get_domain_name(current_site_url)
+        if tasks_running < 20:
+            loop.create_task(crawl_sites(conn, next_batch))
 
-            if current_site_url in crawled or current_site_name in banned:
-                continue  # Avoid crawling the same site twice
+        number_of_links_found = managedb.get_number_of_links(conn) - number_of_links_at_start
+        print('{} links has been found'.format(number_of_links_found))
 
-            new_links = await get_links(current_site_url)
-            queue.update(new_links)
+        if managedb.get_specific_values(conn, '''SELECT COUNT(*) FROM queue''')[0] == 0:
+            print('Queue was emptied... Aborting.')
+            break
 
-            for link_url in new_links:
-                linked_site_name = get_domain_name(link_url)
 
-                if linked_site_name == current_site_name:
-                    continue  # Skip internal links for efficiency
-
-                else:
-                    item = (current_site_name, linked_site_name, current_site_url, link_url)
-                    links_found.append(item)
-
-            if current_site_name not in visited_sites:
-                visited_sites[current_site_name] = 1
-            else:
-                visited_sites[current_site_name] += 1
-                if visited_sites[current_site_name] >= max_visits_per_site:
-                    banned.add(current_site_name)
-            print(visited_sites)
-            crawled.add(current_site_url)
-            print(
-                '\t {} links found {} sites crawled and {} items in queue\t\t\t\tcrawled:  {}'.format(len(links_found),
-                                                                                                      len(crawled),
-                                                                                                      len(queue),
-                                                                                                      current_site_url))
-
+def crawl_async(conn, links_to_find, start_array):
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(crawl())
-    loop.close()
-
-    minutes_taken = (time.time() - t0) / 60.0
-    links_per_minute = len(links_found) / minutes_taken
-    print('took {} minutes and {} links found, esulting in {} links per minute'.format(minutes_taken, len(links_found),
-                                                                                      links_per_minute))
-
-    return links_found
+    loop.run_until_complete(crawl_sites(conn, start_array))
+    loop.create_task(crawl_continuous(conn, links_to_find, loop))
+    loop.run_forever()
 
 
+def crawl_batch(conn, number_of_sites_to_crawl):
+    loop = asyncio.get_event_loop()
+    next_batch = managedb.get_batch(conn, number_of_sites_to_crawl)
 
-    async def fetch(session, url):
-        async with session.get(url) as response:
-            return await response.text()
-
-
-    async def main():
-        async with aiohttp.ClientSession() as session:
-            html = await fetch(session, 'http://python.org')
-            print("html retrieved")
+    loop.run_until_complete(crawl_sites(conn, next_batch))
 
 
-    print("Running until complete")
-    loop.run_until_complete(main())
-    print("done")
+

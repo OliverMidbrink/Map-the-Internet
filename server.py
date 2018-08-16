@@ -32,9 +32,15 @@ def start_server(conn):
             ORDER BY frequency DESC''')
     json_data["links"] = list(map(list, json_data["links"]))
     json_data["websites"] = list(map(list, json_data["websites"]))
-    tools.print_array(json_data["websites"])
+    tools.print_array(json_data["links"])
 
     # Start the server Async
     loop = asyncio.get_event_loop()
     loop.run_until_complete(init_server)
     loop.run_forever()
+
+if __name__ == '__main__':
+    conn = managedb.create_connection('database.db')
+    managedb.create_tables(conn)
+    start_server(conn)
+    conn.close()

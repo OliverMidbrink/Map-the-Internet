@@ -43,11 +43,11 @@ def find_links(n_links, starting_url):
 
     links_found = []
 
-    queue = set()
-    crawled = set()
-    banned = set()
+    queue = set() # db
+    crawled = set() # db
+    banned = set() # memory
 
-    visited_sites = {}
+    visited_sites = {} # db
 
     queue.add(starting_url)
 
