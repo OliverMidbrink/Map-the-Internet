@@ -365,9 +365,23 @@ function drawNet() {
           }
 
           if (originID != -1 && destinationID != -1) {
-            //alert(link[0] + ' ' + link[1] + ' ' + link[2]);
             var strength = Math.pow(link[2], 0.8) * 0.2;
-            links.push(new Link(originID, destinationID, strength));
+            var shouldPush = true;
+
+            //alert(link[0] + ' ' + link[1] + ' ' + link[2]);
+            for (var k = 0; k < links.length; k++) {
+              var dID = links[k].destinationID;
+              var oID = links[k].originID;
+              if (dID == originID && oID == destinationID) {
+                // These two connection overlap, combine them
+                links[k].strength = (links[k].strength + strength) / 2;
+                shouldPush = false;
+              }
+            }
+
+            if (shouldPush) {
+              links.push(new Link(originID, destinationID, strength));
+            }
           }
         }
       }
