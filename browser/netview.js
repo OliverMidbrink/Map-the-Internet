@@ -74,6 +74,12 @@ var mousePressed = false;
 var loadingScreen = 1000;
 var timeWhenGenerated = 0;
 
+var siteHoveringID = -1;
+var lastHoverID = -1;
+var sitesConnectedToHover = [];
+var transformedMouseX = (mouseX - transX) / scale;
+var transformedMouseY = (mouseY - transY) / scale;
+
 // ================== SETUP AND MANAGEMENT FUNCTIONS ====================
 function startApp() {
   setInterval(physics, 10);
@@ -87,8 +93,7 @@ function resize() {
   cY = window.innerHeight / 2;
   updateHiDPICanvas(canvas, width, height);
 }
-
-// ================== DRAW FUNCTIONS ==========================
+// ================== Handy Subrutines ========================
 /*  OLD COLOR FUNCTION
 function getRandomColor() {
   var letters = '0123456789ABCDEF';
@@ -111,6 +116,14 @@ function getRandomColor() {
   return linkColors[Math.floor(Math.random() * linkColors.length)];
 }
 
+
+function getDist(x1, y1, x2, y2) {
+  var dX = x1 - x2;
+  var dY = y1 - y2;
+  return Math.sqrt(dX * dX + dY * dY);
+}
+
+// ================== DRAW FUNCTIONS ==========================
 function drawTextToWidth(textToDraw, posX, posY, width, color) {
   ctx.font = '30px Arial';
   var initialTextWidth = ctx.measureText(textToDraw).width;
@@ -135,7 +148,7 @@ function drawText(textToDraw, posX, posY) {
 }
 
 function drawTextWithoutBackground(textToDraw, posX, posY) {
-  ctx.font = '15px Arial';
+  ctx.font = '25px Arial';
   var textWidth = ctx.measureText(textToDraw).width;
   ctx.fillStyle = 'black';
   ctx.fillText(textToDraw, posX - textWidth / 2, posY + 10);
@@ -252,19 +265,50 @@ class Link {
     this.originID = originID;
     this.destinationID = destinationID;
     this.strength = strength;
+    this.currentStrength = 0;
+    this.state = 'normal';
+    this.shouldDraw = true;
+  }
+
+  animateStrength() {
+    switch (this.state) {
+      case 'normal':
+        this.shouldDraw = true;
+        if (Math.abs(this.strength - this.currentStrength) > 0.01) {
+          this.currentStrength += (this.strength - this.currentStrength) / 8;
+        }
+        break;
+      case 'amplified':
+        this.shouldDraw = true;
+        this.currentStrength += (this.strength * 3 - this.currentStrength) / 8 + 5;
+        break;
+      case 'hidden':
+          this.shouldDraw = false;
+        break;
+    }
   }
 
   draw() {
+    if (siteHoveringID != -1) {
+      if (siteHoveringID == this.originID || siteHoveringID == this.destinationID) {
+        this.state = 'amplified';
+      } else {
+        this.state = 'hidden';
+      }
+
+    } else{
+      this.state = 'normal';
+    }
+
     var site1 = websites[this.originID];
     var site2 = websites[this.destinationID];
-    var dX = site1.pos.x - site2.pos.x;
-    var dY = site1.pos.y - site2.pos.y;
-    var dir = Math.atan2(dY, dX);
 
-    ctx.strokeStyle = colors[this.originID];
-    drawLine(site1.pos.x, site1.pos.y, site2.pos.x, site2.pos.y, this.strength);
-    //drawLine(site2.pos.x, site2.pos.y, site2.pos.x - 5, site2.pos.y - 5, 1);
-    //drawLine(site2.pos.x, site2.pos.y, site2.pos.x - 5, site2.pos.y + 5, 1);
+    if(this.shouldDraw) {
+      ctx.strokeStyle = colors[this.originID];
+      drawLine(site1.pos.x, site1.pos.y, site2.pos.x, site2.pos.y, this.currentStrength);
+      //drawLine(site2.pos.x, site2.pos.y, site2.pos.x - 5, site2.pos.y - 5, 1);
+      //drawLine(site2.pos.x, site2.pos.y, site2.pos.x - 5, site2.pos.y + 5, 1);
+    }
   }
 
 }
@@ -272,10 +316,14 @@ class Link {
 
 class Website {
   constructor(name, size, pos, links, id) {
+    this.visible = true;
     this.id = id;
     this.name = name;
     this.size = size;
+    this.currentSize = size;
+    this.assignableSize = size;
     this.pos = pos;
+    this.assignablePos = new Pos(pos.x, pos.y);
     this.links = links;
   }
 
@@ -283,24 +331,39 @@ class Website {
     this.pos.animatePos(0.1);
   }
 
+  animateSize(){
+    if (this.visible) {
+      this.currentSize += (this.size - this.currentSize) / 8;
+    }else {
+      this.currentSize += (0 - this.currentSize) / 8;
+    }
+  }
+
   draw() {
-    drawCircle(this.pos.x, this.pos.y, this.size, 'black');
+    if (sitesConnectedToHover.indexOf(this.id) > -1 || siteHoveringID == this.id) { // if sites is connected to hover
+      this.visible = true;
+    } else if (sitesConnectedToHover.length != 0){
+      this.visible = false;
+    } else {
+      this.visible = true;
+    }
+
+    drawCircle(this.pos.x, this.pos.y, this.currentSize, 'black');
     ctx.font = '30px Arial';
     var textWidthOutside = ctx.measureText(this.name).width;
 
     if (scale > (10 / this.size)) {
-      var textCo = 10;
+      var textCo = 25;
       if (this.size * 1.8 > textWidthOutside) {
         drawTextToWidth(this.name,
                        this.pos.x,
                        this.pos.y,
-                       this.size * 1.8,
+                       this.currentSize * 1.8,
                        'white');
-      } else {
+      } else if (this.visible) {
         drawTextWithoutBackground(this.name,
                                   this.pos.x,
-                                  this.pos.y - this.size * 1.05 - 30,
-                                  Math.pow(this.size, 0.3) * textCo);
+                                  this.pos.y - this.currentSize * 1.05 - 30);
       }
     }
     //drawLine(this.pos.x, this.pos.y, this.pos.x, this.pos.y - 80, 5);
@@ -391,7 +454,7 @@ function drawNet() {
               var oID = links[k].originID;
               if (dID == originID && oID == destinationID) {
                 // These two connection overlap, combine them
-                links[k].strength = (links[k].strength + strength) / 2;
+                links[k].strength = (links[k].strength + strength) / 2 + 2;
                 shouldPush = false;
               }
             }
@@ -441,6 +504,41 @@ function drawNet() {
 }
 
 // ================== UPDATING FUNCTIONS =====================
+function checkIfHoveringOverSite() {
+  siteHoveringID = -1;
+  for (var i = 0; i < websites.length; i++) {
+    site = websites[i];
+    transformedMouseX = (mouseX - transX) / scale;
+    transformedMouseY = (mouseY - transY) / scale;
+    if (getDist(site.pos.x, site.pos.y, transformedMouseX, transformedMouseY) < site.size) {
+      siteHoveringID = i;
+    }
+  }
+
+  if(siteHoveringID != -1 && sitesConnectedToHover.length == 0 && lastHoverID == -1) { //hovering over new site
+    for (var i = 0; i < links.length; i++) {
+      var link = links[i];
+      if (link.originID == siteHoveringID) {
+        sitesConnectedToHover.push(link.destinationID);
+      }
+      if (link.destinationID == siteHoveringID) {
+        sitesConnectedToHover.push(link.originID);
+      }
+    }
+
+    if (sitesConnectedToHover == 0) { // Hovered sites is not connected to any of displayed sites
+      sitesConnectedToHover.push(-1);
+    }
+    lastHoverID = siteHoveringID;
+  }
+
+  if (siteHoveringID == -1) { //not hovering over site so clear connected sites list
+    sitesConnectedToHover = [];
+    lastHoverID = -1;
+  }
+}
+
+
 function physics() {
   millis += 10; // keep track of time
 
@@ -459,9 +557,14 @@ function physics() {
   }
 
   for (i = 0; i < websites.length; i++) {
+    websites[i].animateSize();
     if (generated && millis - timeWhenGenerated > 700) {
       websites[i].animate();
     }
+  }
+
+  for (i = 0; i < links.length; i++) {
+    links[i].animateStrength();
   }
 }
 
@@ -503,6 +606,8 @@ document.onmouseup = function (event) {
 
 
 document.onmousemove = function (event) {
+  checkIfHoveringOverSite();
+
   if (mousePressed && mouseX != 0 && mouseY != 0) {
     var co = 1;
     if (jsonLoaded == false || millis < loadingScreen) {
@@ -521,6 +626,8 @@ document.onmousemove = function (event) {
 };
 
 canvas.onmousewheel = function(event) {
+  checkIfHoveringOverSite();
+
   event.preventDefault();
 
   var coefficient = 1 + event.wheelDelta / 2400;
