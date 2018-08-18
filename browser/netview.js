@@ -246,8 +246,8 @@ class Link {
 
     ctx.strokeStyle = colors[this.originID];
     drawLine(site1.pos.x, site1.pos.y, site2.pos.x, site2.pos.y, this.strength);
-    drawLine(site2.pos.x, site2.pos.y, site2.pos.x - 5, site2.pos.y - 5, 1);
-    drawLine(site2.pos.x, site2.pos.y, site2.pos.x - 5, site2.pos.y + 5, 1);
+    //drawLine(site2.pos.x, site2.pos.y, site2.pos.x - 5, site2.pos.y - 5, 1);
+    //drawLine(site2.pos.x, site2.pos.y, site2.pos.x - 5, site2.pos.y + 5, 1);
   }
 
 }
