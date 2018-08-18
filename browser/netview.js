@@ -12,6 +12,11 @@ var PIXEL_RATIO = (function() {
 })();
 
 
+var linkColors = ['#001f3f', '#0074D9', '#7FDBFF', '#39CCCC', ]
+            //      '#3D9970', '#2ECC40', '#01FF70',
+            //      '#FF851B', '#FF4136', '#85144b',
+            //      '#B10DC9', '#00919f', '#700000']
+
 var createHiDPICanvas = function(w, h, ratio) {
   if (!ratio) {
     ratio = PIXEL_RATIO;
@@ -67,7 +72,7 @@ var mouseY = 0;
 var mousePressed = false;
 
 var loadingScreen = 1000;
-
+var timeWhenGenerated = 0;
 
 // ================== SETUP AND MANAGEMENT FUNCTIONS ====================
 function startApp() {
@@ -84,6 +89,7 @@ function resize() {
 }
 
 // ================== DRAW FUNCTIONS ==========================
+/*  OLD COLOR FUNCTION
 function getRandomColor() {
   var letters = '0123456789ABCDEF';
   var color = '#';
@@ -92,6 +98,17 @@ function getRandomColor() {
   }
 
   return color;
+}
+*/
+
+function getRandomColor() {
+  var letters = '0123456789ABCDEF';
+  var color = '#';
+  for (var i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+
+  return linkColors[Math.floor(Math.random() * linkColors.length)];
 }
 
 function drawTextToWidth(textToDraw, posX, posY, width, color) {
@@ -410,13 +427,16 @@ function drawNet() {
 
         if (millis > (loadingScreen + 1000) && collisionsFound == 0 && generated == false) {
           generated = true;
+          timeWhenGenerated = millis;
           //alert('Generated!');
         }
 
       }
     }
 
-    //drawText('collisionsFound: ' + collisionsFound, cX, cY);
+    if (!generated) {
+      drawText('Tasks left: ' + collisionsFound, cX, cY);
+    }
   }
 }
 
@@ -424,12 +444,22 @@ function drawNet() {
 function physics() {
   millis += 10; // keep track of time
 
-  currentScale += (scale - currentScale) / 10;
-  transX += (targetTransX - transX) / 10;
-  transY += (targetTransY - transY) / 10;
+  if (millis - timeWhenGenerated < 800 && millis - timeWhenGenerated > 0 && generated) {
+    scale = 0.1;
+    targetTransX = cX * 0.9;
+    targetTransY = cY * 0.9;
+    currentScale += (scale - currentScale) / 15;
+    transX += (targetTransX - transX) / 15;
+    transY += (targetTransY - transY) / 15;
+  }
+  else {
+    currentScale += (scale - currentScale) / 2;
+    transX += (targetTransX - transX) / 2;
+    transY += (targetTransY - transY) / 2;
+  }
 
   for (i = 0; i < websites.length; i++) {
-    if (generated) {
+    if (generated && millis - timeWhenGenerated > 700) {
       websites[i].animate();
     }
   }
@@ -501,8 +531,8 @@ canvas.onmousewheel = function(event) {
   var disY = transY-canvas.height/2;
   transX=disX*coefficient+canvas.width/2;
   transY=disY*coefficient+canvas.height/2;*/
-  var disX = targetTransX - canvas.width / 2;
-  var disY = targetTransY - canvas.height / 2;
+  var disX = targetTransX - cX;
+  var disY = targetTransY - cY;
 
   var relX = mouseX - targetTransX;
   var relY = mouseY - targetTransY;
@@ -517,7 +547,6 @@ canvas.onmousewheel = function(event) {
   //transY-=(coefficient-1)*relY;
 
   scale *= coefficient;
-  targetScale *= coefficient;
 };
 
 canvas.onmouseout = function (event) {
