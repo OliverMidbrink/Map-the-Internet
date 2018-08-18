@@ -80,6 +80,8 @@ var sitesConnectedToHover = [];
 var transformedMouseX = (mouseX - transX) / scale;
 var transformedMouseY = (mouseY - transY) / scale;
 
+var isTouch = false;
+
 // ================== SETUP AND MANAGEMENT FUNCTIONS ====================
 function startApp() {
   setInterval(physics, 10);
@@ -568,23 +570,37 @@ function physics() {
   }
 }
 
+
+function touchDisclaimer() {
+  drawCircle(cX, cY, 4000, "lightblue");
+  drawText("This web application", cX, cY - 90);
+  drawText("is currently not supported", cX, cY - 45);
+  drawText("on touchscreen devices.", cX, cY);
+  drawText("Please visit this site on", cX, cY + 45);
+  drawText("a laptop or desktop computer", cX, cY + 90);
+}
+
 function frame() {
-  // setup canvas
-  ctx.save();
-  ctx.clearRect(0, 0, width, height);
-  ctx.translate(transX, transY);
-  ctx.scale(currentScale, currentScale);
-
-
-  if (jsonLoaded == false || millis < loadingScreen) {
-    drawLoadingScreen();
+  if("ontouchstart" in document.documentElement) {
+    touchDisclaimer();
   } else {
-    drawNet();
-  }
+    // setup canvas
+    ctx.save();
+    ctx.clearRect(0, 0, width, height);
+    ctx.translate(transX, transY);
+    ctx.scale(currentScale, currentScale);
 
-  // prepare for next frames
-  ctx.restore();
-  window.requestAnimationFrame(frame);
+
+    if (jsonLoaded == false || millis < loadingScreen) {
+      drawLoadingScreen();
+    } else {
+      drawNet();
+    }
+
+    // prepare for next frames
+    ctx.restore();
+    window.requestAnimationFrame(frame);
+  }
 }
 
 // ============== Mouse functions ==============================
