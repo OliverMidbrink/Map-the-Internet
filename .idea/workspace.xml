@@ -1,9 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="d1368076-f8a5-4449-a2d4-ee3c6c28a4de" name="Default" comment="The async is functioning partially, can pick up after shutdown but hangs up on the slowest request tasks">
-      <change beforePath="$PROJECT_DIR$/browser/netview.js" beforeDir="false" afterPath="$PROJECT_DIR$/browser/netview.js" afterDir="false" />
-    </list>
+    <list default="true" id="d1368076-f8a5-4449-a2d4-ee3c6c28a4de" name="Default" comment="The async is functioning partially, can pick up after shutdown but hangs up on the slowest request tasks" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="TRACKING_ENABLED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -110,8 +108,8 @@
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="282" />
-    <option name="y" value="113" />
+    <option name="x" value="-1519" />
+    <option name="y" value="134" />
     <option name="width" value="1440" />
     <option name="height" value="877" />
   </component>
@@ -212,7 +210,7 @@
       <window_info anchor="bottom" id="Event Log" order="6" side_tool="true" />
       <window_info anchor="bottom" id="Version Control" order="7" weight="0.32876712" />
       <window_info anchor="bottom" id="Python Console" order="8" />
-      <window_info anchor="right" id="Run" order="4" visible="true" weight="0.35533708" />
+      <window_info anchor="right" id="Run" order="4" weight="0.35533708" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info anchor="bottom" id="Terminal" order="9" />
       <window_info id="Favorites" order="2" side_tool="true" />

@@ -282,7 +282,7 @@ class Link {
         break;
       case 'amplified':
         this.shouldDraw = true;
-        this.currentStrength += (this.strength * 3 - this.currentStrength) / 8 + 5;
+        this.currentStrength += (this.strength * this.strength / 5 + 5 - this.currentStrength) / 8;
         break;
       case 'hidden':
           this.shouldDraw = false;
