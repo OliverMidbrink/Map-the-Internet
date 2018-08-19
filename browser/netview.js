@@ -399,9 +399,31 @@ var links = [];
 var generated = false;
 var colors = [];
 
-function drawNet() {
-  var collisionsFound = 0;
+function generateNetwork() {
+  var collisionsFound = 10;
 
+  while (collisionsFound > 0) {
+    collisionsFound = 0;
+    for (i = 0; i < websites.length; i++) {
+      for (j = 0; j < i; j++) {
+        otherSite = websites[j];
+        thisSite = websites[i];
+        if (thisSite.overlaps(otherSite)) {
+          collisionsFound += 1;
+          var offsetX = (thisSite.pos.tX - otherSite.pos.tX) * (Math.random() + 0.5) * 2;
+          var offsetY = (thisSite.pos.tY - otherSite.pos.tY) * (Math.random() + 0.5) * 2;
+          thisSite.pos.setTargetPos(thisSite.pos.tX + offsetX, thisSite.pos.tY + offsetY);
+          thisSite.pos.setCurrentPos(cX, cY);
+        }
+      }
+    }
+    drawText('Tasks remaining: ' + collisionsFound, cX, cY);
+  }
+}
+
+
+
+function drawNet() {
   if (millis - timeLog > 10) {
     timeLog = millis;
     size += (width / 1.5 - size) * 0.1;
@@ -472,35 +494,17 @@ function drawNet() {
         links[i].draw();
       }
 
-      for (i = 0; i < websites.length; i++) {
-        if (generated) { websites[i].draw(); }
-
-        if (generated == false) {
-          for (j = 0; j < i; j++) {
-            otherSite = websites[j];
-            thisSite = websites[i];
-
-            if (thisSite.overlaps(otherSite)) {
-              collisionsFound += 1;
-              var offsetX = (thisSite.pos.tX - otherSite.pos.tX) * (Math.random() + 0.5) * 2;
-              var offsetY = (thisSite.pos.tY - otherSite.pos.tY) * (Math.random() + 0.5) * 2;
-              thisSite.pos.setTargetPos(thisSite.pos.tX + offsetX, thisSite.pos.tY + offsetY);
-              thisSite.pos.setCurrentPos(cX, cY);
-            }
-          }
+      if (generated) {
+        for (i = 0; i < websites.length; i++) {
+          websites[i].draw();
         }
-
-        if (millis > (loadingScreen + 1000) && collisionsFound == 0 && generated == false) {
-          generated = true;
-          timeWhenGenerated = millis;
-          //alert('Generated!');
-        }
-
       }
-    }
-
-    if (!generated) {
-      drawText('Tasks left: ' + collisionsFound, cX, cY);
+      if (generated == false) {
+        generateNetwork();
+        generated = true;
+        generated = true;
+        timeWhenGenerated = millis;
+      }
     }
   }
 }
