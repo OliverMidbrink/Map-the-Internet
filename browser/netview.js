@@ -12,7 +12,7 @@ var PIXEL_RATIO = (function() {
 })();
 
 
-var linkColors = ['#001f3f', '#0074D9', '#7FDBFF', '#39CCCC', ]
+var linkColors = ['#144b85', '#096cc3', '#3179b5', '#3392c7', '#3fabd9', '#35aec8']
             //      '#3D9970', '#2ECC40', '#01FF70',
             //      '#FF851B', '#FF4136', '#85144b',
             //      '#B10DC9', '#00919f', '#700000']
@@ -189,12 +189,12 @@ class Sparkle {
   draw(timeRef) {
     var m = this.changeInMagnitude * Math.sin(timeRef - this.magnitudeOffset) + this.magnitude;
 
-    ctx.strokeStyle = 'black';
+    ctx.strokeStyle = linkColor;
     drawLine(cX + Math.cos(this.direction) * m,
       cY + 80 + Math.sin(this.direction) * m, cX, cY + 80, 5);
 
     drawCircle(cX + Math.cos(this.direction) * m,
-      cY + 80 + Math.sin(this.direction) * m, this.radius, 'white');
+      cY + 80 + Math.sin(this.direction) * m, this.radius, circleColor);
   }
 }
 
@@ -202,7 +202,9 @@ var sparkles = [];
 const nSparkles = 10;
 var numberOfDots = 0;
 var timelog = 0;
-var loadingColor = 'lightblue';
+var loadingColor = 'rgb(140, 197, 249)';
+var linkColor = 'black';
+var circleColor = 'white';
 
 function drawLoadingScreen() {
   ctx.fillStyle = loadingColor;
@@ -212,7 +214,7 @@ function drawLoadingScreen() {
     dir = Math.PI * 2 * (i / nSparkles);
     if (sparkles.length != nSparkles) {
       sparkles[i] = new Sparkle(15, 135, dir, 50,
-        Math.random() * Math.PI * 0);
+        Math.random() * Math.PI * 0.2);
 
       //sparkles[i] = new Sparkle(15, 120, dir, 30, dir);
     } else {
@@ -233,7 +235,7 @@ function drawLoadingScreen() {
 
   var textToAdd = '.'.repeat(numberOfDots) + ' '.repeat(3 - numberOfDots);
   drawText('Connecting to server ' + textToAdd, cX, cY - 200);
-  drawCircle(cX, cY + 80, 30, 'white');
+  drawCircle(cX, cY + 80, 30, circleColor);
 }
 
 // ==================== Drawing the network =================
@@ -282,10 +284,11 @@ class Link {
         break;
       case 'amplified':
         this.shouldDraw = true;
-        this.currentStrength += (this.strength * this.strength / 5 + 5 - this.currentStrength) / 8;
+        this.currentStrength += (Math.min(this.strength * this.strength * this.strength, 400) / 5 + 5 - this.currentStrength) / 8;
         break;
       case 'hidden':
-          this.shouldDraw = false;
+        this.currentStrength += (0.001 - this.currentStrength) / 12;
+        this.shouldDraw = true;
         break;
     }
   }
@@ -354,7 +357,7 @@ class Website {
     ctx.font = '30px Arial';
     var textWidthOutside = ctx.measureText(this.name).width;
 
-    if (scale > (10 / this.size)) {
+    if (scale > (10 / this.size) && millis - timeWhenGenerated > 800) {
       var textCo = 25;
       if (this.size * 1.8 > textWidthOutside) {
         drawTextToWidth(this.name,
@@ -398,6 +401,13 @@ var websites = [];
 var links = [];
 var generated = false;
 var colors = [];
+var isSearching = false;
+
+
+
+function drawGUI() {
+  // Search bar
+}
 
 function generateNetwork() {
   var collisionsFound = 10;
@@ -417,7 +427,7 @@ function generateNetwork() {
         }
       }
     }
-    drawText('Tasks remaining: ' + collisionsFound, cX, cY);
+    //drawText('Tasks remaining: ' + collisionsFound, cX, cY);
   }
 }
 
@@ -489,7 +499,7 @@ function drawNet() {
           }
         }
       }
-    } else {
+    } else { // If this is not the first iteration of drawNet do the following:
       for (i = 0; i < links.length; i++) {
         links[i].draw();
       }
@@ -498,10 +508,8 @@ function drawNet() {
         for (i = 0; i < websites.length; i++) {
           websites[i].draw();
         }
-      }
-      if (generated == false) {
+      } else {
         generateNetwork();
-        generated = true;
         generated = true;
         timeWhenGenerated = millis;
       }
@@ -603,8 +611,17 @@ function frame() {
 
     // prepare for next frames
     ctx.restore();
+    drawGUI();
     window.requestAnimationFrame(frame);
   }
+}
+
+
+function inRect(x, y, rX, rY, rW, rH) {
+  if (x > rX && x < rX + rW && y > rY && y < rY + rH) {
+    return true;
+  }
+  return false;
 }
 
 // ============== Mouse functions ==============================
