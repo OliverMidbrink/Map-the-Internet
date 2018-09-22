@@ -41,6 +41,10 @@ def start_server(conn):
     json_data["websites"] = list(map(list, json_data["websites"]))
     tools.print_array(json_data["links"])
 
+    with open('data.json', 'w') as output_file:
+        json.dump(json_data, output_file, ensure_ascii=False)
+
+
     # Start the server Async
     loop = asyncio.get_event_loop()
     loop.run_until_complete(init_server)

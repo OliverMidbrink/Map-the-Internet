@@ -230,7 +230,7 @@ function drawLoadingScreen() {
     }
 
     // try to Connecting
-    connectToServer();
+    loadJsonData();
   }
 
   var textToAdd = '.'.repeat(numberOfDots) + ' '.repeat(3 - numberOfDots);
@@ -701,18 +701,10 @@ canvas.onmouseout = function (event) {
 // ================== SERVER FUNCTIONS ================================
 var socket = null;
 
-function connectToServer() {
-  socket = new WebSocket('ws://localhost:4357');
-
-  // Connection opened
-  socket.addEventListener('open', function(event) {
-    socket.send('datarequest');
-  });
-
-  // Listen for messages
-  socket.addEventListener('message', function(event) {
-    msgReceived = 'Data received from server...';
-    jsonData = JSON.parse(event.data);
-    jsonLoaded = true;
-  });
+function loadJsonData() {
+    $.getJSON("https://olivermidbrink.github.io/map-the-internet/data.json", function(json) {
+      jsonData = JSON.parse(json);
+      alert("json");
+      jsonLoaded = true;
+    });
 }
