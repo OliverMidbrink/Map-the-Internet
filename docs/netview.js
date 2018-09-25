@@ -702,9 +702,6 @@ canvas.onmouseout = function (event) {
 var socket = null;
 
 function loadJsonData() {
-    $.getJSON("https://olivermidbrink.github.io/map-the-internet/data.json", function(json) {
-      jsonData = JSON.parse(json);
-      alert("json");
-      jsonLoaded = true;
-    });
+  jsonData = JSON.parse(data);
+  jsonLoaded = true;
 }
