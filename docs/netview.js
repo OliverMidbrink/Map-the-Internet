@@ -287,8 +287,8 @@ class Link {
         this.currentStrength += (Math.min(this.strength * this.strength * this.strength, 400) / 5 + 5 - this.currentStrength) / 8;
         break;
       case 'hidden':
-        this.currentStrength += (0.001 - this.currentStrength) / 12;
-        this.shouldDraw = true;
+        this.shouldDraw = false;
+        //this.currentStrength += (0.001 - this.currentStrength) / 12;
         break;
     }
   }
